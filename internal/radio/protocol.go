@@ -3,13 +3,16 @@
 package radio
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"go.bug.st/serial"
+
+	"krzywicki.pro/freqr/internal/radio/models"
 )
 
-func GetAllChannels(portName string, baudRate int) ([]*Channel, error) {
+func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Channel, error) {
 	mode := &serial.Mode{
 		BaudRate: baudRate,
 	}
@@ -27,13 +30,39 @@ func GetAllChannels(portName string, baudRate int) ([]*Channel, error) {
 	buff := make([]byte, 100)
 	port.Read(buff) // TODO read resp; should be PRG OK and reset buffer
 
-	channels := make([]*Channel, 0)
+	port.Read(make([]byte, 1000))
 
-	for i := range 300 {
+	// TODO: read channels number from config
+	var channels []*models.Channel
+	retries := 0
+	for range maxRetries {
+		channels, err = listChannels(port, 300)
+		if err == nil {
+			break
+		}
+		retries++
+	}
+
+	if retries > maxRetries {
+		return nil, errors.New("maximum number of retries exceeded.")
+	}
+
+	_, err = port.Write([]byte("EPG\n\r"))
+	if err != nil {
+		return nil, err
+	}
+
+	return channels, nil
+}
+
+func listChannels(port serial.Port, amount uint16) ([]*models.Channel, error) {
+	channels := make([]*models.Channel, 0)
+
+	for i := range amount {
 		buff := make([]byte, 100)
 		command := fmt.Sprintf("CIN,%d\r", i+1)
 		// fmt.Printf("Input: %s\n", command)
-		_, err = port.Write([]byte(command))
+		_, err := port.Write([]byte(command))
 		if err != nil {
 			return nil, err
 		}
@@ -48,19 +77,14 @@ func GetAllChannels(portName string, baudRate int) ([]*Channel, error) {
 		}
 
 		channelData := string(buff[:n])
-		fmt.Println(channelData)
-		channelObj, err := newChannelFromText(channelData)
+		// fmt.Println(channelData)
+		channelObj, err := models.NewChannelFromText(channelData)
 		if err != nil {
-			fmt.Printf("Error while parsing channel %d\n", i) // TODO: as log level
-			continue
+			// fmt.Printf("Error while parsing channel %d\n", i) // TODO: as log level
+			// continue                                          // TODO: break or auto reset from start as option
+			return nil, err
 		}
-		// fmt.Println(channelObj.Text())
 		channels = append(channels, channelObj)
-	}
-
-	_, err = port.Write([]byte("EPG\n\r"))
-	if err != nil {
-		return nil, err
 	}
 
 	return channels, nil

@@ -1,6 +1,6 @@
 // Radio protocol-related models implementations.
 
-package radio
+package models
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func newChannel(
 }
 
 // A function creating a new `Channel` structure object from text device response.
-func newChannelFromText(text string) (*Channel, error) {
+func NewChannelFromText(text string) (*Channel, error) {
 	parts := strings.Split(text, ",")
 	chId, err := strconv.Atoi(parts[1])
 	if err != nil {
@@ -73,7 +73,7 @@ func newChannelFromText(text string) (*Channel, error) {
 }
 
 // A function returning text representation of frequency channel.
-func (c *Channel) Text() string {
+func (c *Channel) ToString() string {
 	return fmt.Sprintf(
 		"CIN,%d,%s,%s,%s,,%d,%d,%d",
 		c.Index,
@@ -82,7 +82,7 @@ func (c *Channel) Text() string {
 		c.Mod,
 		boolToInt(c.Delay),
 		boolToInt(c.Lockout),
-		boolToInt(c.Lockout),
+		boolToInt(c.Priority),
 	)
 }
 
