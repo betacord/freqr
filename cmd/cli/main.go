@@ -1,3 +1,5 @@
+// An entry point of the freqr.
+
 package main
 
 import (
