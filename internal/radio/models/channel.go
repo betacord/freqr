@@ -17,7 +17,7 @@ const (
 
 // A struct representing frequency channel.
 type Channel struct {
-	Index    uint16
+	Index    int
 	Name     string
 	Freq     string
 	Mod      modType
@@ -28,7 +28,7 @@ type Channel struct {
 
 // A function creating a new `Channel` structure object.
 func newChannel(
-	index uint16,
+	index int,
 	name string,
 	freq string,
 	mod modType,
@@ -60,7 +60,7 @@ func NewChannelFromText(text string) (*Channel, error) {
 	priority := parts[7] == "1"
 
 	ch := newChannel(
-		uint16(chId),
+		chId,
 		parts[2],
 		parts[3],
 		modType(parts[4]),
@@ -84,6 +84,18 @@ func (c *Channel) ToString() string {
 		boolToInt(c.Lockout),
 		boolToInt(c.Priority),
 	)
+}
+
+func (c *Channel) ToCSVRow() []string {
+	return []string{
+		strconv.Itoa(c.Index),
+		c.Name,
+		c.Freq,
+		string(c.Mod),
+		fmt.Sprintf("%v", c.Delay),
+		fmt.Sprintf("%v", c.Lockout),
+		fmt.Sprintf("%v", c.Priority),
+	}
 }
 
 func boolToInt(val bool) uint8 {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/schollz/progressbar/v3"
 	"go.bug.st/serial"
 
 	"krzywicki.pro/freqr/internal/radio/models"
@@ -32,6 +33,10 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 
 	port.Read(make([]byte, 1000))
 
+	defer func(port serial.Port) {
+		_, _ = port.Write([]byte("EPG\n\r"))
+	}(port)
+
 	// TODO: read channels number from config
 	var channels []*models.Channel
 	retries := 0
@@ -47,16 +52,12 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 		return nil, errors.New("maximum number of retries exceeded.")
 	}
 
-	_, err = port.Write([]byte("EPG\n\r"))
-	if err != nil {
-		return nil, err
-	}
-
 	return channels, nil
 }
 
-func listChannels(port serial.Port, amount uint16) ([]*models.Channel, error) {
+func listChannels(port serial.Port, amount int) ([]*models.Channel, error) {
 	channels := make([]*models.Channel, 0)
+	bar := progressbar.Default(int64(amount))
 
 	for i := range amount {
 		buff := make([]byte, 100)
@@ -84,7 +85,9 @@ func listChannels(port serial.Port, amount uint16) ([]*models.Channel, error) {
 			// continue                                          // TODO: break or auto reset from start as option
 			return nil, err
 		}
+
 		channels = append(channels, channelObj)
+		bar.Add(1)
 	}
 
 	return channels, nil
