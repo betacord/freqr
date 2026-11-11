@@ -72,6 +72,23 @@ func NewChannelFromText(text string) (*Channel, error) {
 	return ch, nil
 }
 
+func NewChannelFromCSVRecord(record []string) (*Channel, error) {
+	id, err := strconv.Atoi(record[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return newChannel(
+		id,
+		record[1],
+		record[2],
+		modType(record[3]),
+		strToBool(record[4]),
+		strToBool(record[5]),
+		strToBool(record[6]),
+	), nil
+}
+
 // A function returning text representation of frequency channel.
 func (c *Channel) ToString() string {
 	return fmt.Sprintf(
@@ -104,4 +121,8 @@ func boolToInt(val bool) uint8 {
 	} else {
 		return 1
 	}
+}
+
+func strToBool(val string) bool {
+	return strings.ToLower(val) == "true"
 }

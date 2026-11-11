@@ -3,26 +3,14 @@
 package cli
 
 import (
-	"encoding/csv"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
+	"krzywicki.pro/freqr/internal/csvutil"
 	"krzywicki.pro/freqr/internal/radio"
-	"krzywicki.pro/freqr/internal/radio/models"
 )
 
-var channelsCSvHeader = []string{
-	"ID",
-	"Name",
-	"Freq",
-	"Mod",
-	"Delay",
-	"Lockout",
-	"Priority",
-}
-
-var filePath string
+var exportFilePath string
 
 var exportChannelsCmd = &cobra.Command{
 	Use:   "export-channels",
@@ -37,41 +25,19 @@ var exportChannelsCmd = &cobra.Command{
 			1,
 		)
 		if err != nil {
-			fmt.Printf("Error while listing saved channels: %s.\n", err)
+			fmt.Printf("Error while getting saved channels: %s.\n", err)
 			return
 		}
-		err = exportChannelsToCSV(filePath, channels)
+		err = csvutil.ExportChannelsToCSV(exportFilePath, channels)
 		if err != nil {
 			fmt.Printf("Error while exporting channels to CSV file: %s.\n", err)
 		}
 	},
 }
 
-func exportChannelsToCSV(fp string, channels []*models.Channel) error {
-	file, err := os.Create(fp)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	_ = writer.Write(channelsCSvHeader)
-
-	for _, ch := range channels {
-		err := writer.Write(ch.ToCSVRow())
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func init() {
 	rootCmd.AddCommand(exportChannelsCmd)
 
-	exportChannelsCmd.Flags().StringVarP(&filePath, "filepath", "p", "", "CSV output filepath")
+	exportChannelsCmd.Flags().StringVarP(&exportFilePath, "filepath", "p", "", "CSV output filepath")
 	exportChannelsCmd.MarkFlagRequired("filepath")
 }

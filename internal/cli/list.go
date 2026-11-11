@@ -4,6 +4,7 @@ package cli
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 	"krzywicki.pro/freqr/internal/radio"
@@ -26,6 +27,7 @@ var listUSBCmd = &cobra.Command{
 	},
 }
 
+// A `list` cobra command handling listing all saved channels in the tabular form.
 var listChannelsCmd = &cobra.Command{
 	Use:   "list-channels",
 	Short: "List all saved channels",
@@ -39,7 +41,7 @@ var listChannelsCmd = &cobra.Command{
 			1,
 		)
 		if err != nil {
-			fmt.Printf("Error while listing saved channels: %s.\n", err)
+			log.Fatalf("Error while listing saved channels: %s.\n", err)
 			return
 		}
 
