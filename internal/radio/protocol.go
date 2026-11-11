@@ -11,6 +11,7 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"go.bug.st/serial"
 
+	"krzywicki.pro/freqr/internal/config"
 	"krzywicki.pro/freqr/internal/radio/models"
 )
 
@@ -28,6 +29,7 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 	mode := &serial.Mode{
 		BaudRate: baudRate,
 	}
+	cfg := config.Get()
 
 	port, err := serial.Open(portName, mode)
 	if err != nil {
@@ -40,7 +42,10 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 	}
 
 	buff := make([]byte, 128)
-	port.Read(buff) // TODO read resp; should be PRG OK and reset buffer
+	n, _ := port.Read(buff)
+	if string(buff[:n]) == "PRG OK" {
+		buff = make([]byte, 128)
+	}
 
 	port.Read(make([]byte, 1024))
 
@@ -48,11 +53,10 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 		_, _ = port.Write([]byte("EPG\n\r"))
 	}(port)
 
-	// TODO: read channels number from config
 	var channels []*models.Channel
 	retries := 0
 	for range maxRetries {
-		channels, err = listChannels(port, 300)
+		channels, err = listChannels(port, cfg.Radio.TotalChannels)
 		if err == nil {
 			break
 		}
@@ -76,7 +80,7 @@ func GetAllChannels(portName string, baudRate int, maxRetries int) ([]*models.Ch
 // Returns
 //   - error - when any of the steps failed
 func SaveChannels(portName string, baudRate int, channels []*models.Channel) error {
-	// TODO: refactor with above function
+	cfg := config.Get()
 	mode := &serial.Mode{
 		BaudRate: baudRate,
 	}
@@ -91,9 +95,11 @@ func SaveChannels(portName string, baudRate int, channels []*models.Channel) err
 		return err
 	}
 
-	// TODO: read first response as buffer reset from previous session
 	buff := make([]byte, 128)
-	port.Read(buff) // TODO read resp; should be PRG OK and reset buffer
+	n, _ := port.Read(buff)
+	if string(buff[:n]) == "PRG OK" {
+		buff = make([]byte, 128)
+	}
 
 	port.Read(make([]byte, 1024))
 
@@ -110,8 +116,8 @@ func SaveChannels(portName string, baudRate int, channels []*models.Channel) err
 		if err != nil {
 			return err
 		}
-		// TODO: read sleep time from config file
-		time.Sleep(100 * time.Millisecond)
+
+		time.Sleep(time.Duration(cfg.Radio.WriteSleepTime) * time.Millisecond)
 		bar.Add(1)
 
 		n, err := port.Read(buff)
@@ -133,6 +139,7 @@ func SaveChannels(portName string, baudRate int, channels []*models.Channel) err
 //   - portName - the port identifier
 //   - amount - the size of channels memory in the device
 func listChannels(port serial.Port, amount int) ([]*models.Channel, error) {
+	cfg := config.Get()
 	channels := make([]*models.Channel, 0)
 	bar := progressbar.Default(int64(amount))
 
@@ -144,8 +151,8 @@ func listChannels(port serial.Port, amount int) ([]*models.Channel, error) {
 		if err != nil {
 			return nil, err
 		}
-		// TODO: read sleep time from config file
-		time.Sleep(100 * time.Millisecond)
+
+		time.Sleep(time.Duration(cfg.Radio.ReadSleepTime) * time.Millisecond)
 		n, err := port.Read(buff)
 		if err != nil {
 			return nil, err
@@ -158,8 +165,9 @@ func listChannels(port serial.Port, amount int) ([]*models.Channel, error) {
 		channelObj, err := models.NewChannelFromText(channelData)
 		if err != nil {
 			log.Printf("Error while parsing channel %d\n", i)
-			// fmt.Printf("Error while parsing channel %d\n", i) // TODO: as log level
-			// continue                                          // TODO: break or auto reset from start as option
+			if cfg.Radio.BreakWhenErr == false {
+				continue
+			}
 			return nil, err
 		}
 

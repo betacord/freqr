@@ -1,0 +1,8 @@
+radio:
+  port_name: "/dev/cu.usbserial-0239ADD6"
+  baud_rate: 57600
+  max_retries: 1
+  read_sleep_time: 300
+  write_sleep_time: 300
+  total_channels: 300
+  break_when_err: true

@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"krzywicki.pro/freqr/internal/config"
 	"krzywicki.pro/freqr/internal/radio"
 	"krzywicki.pro/freqr/internal/uiutil"
 )
@@ -32,13 +33,12 @@ var listChannelsCmd = &cobra.Command{
 	Use:   "list-channels",
 	Short: "List all saved channels",
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: read port and rate from cfg file
-		// TODO: read output (list / table or csv) from cfg
-		// TODO: read max retries from config
+		cfg := config.Get()
+
 		channels, err := radio.GetAllChannels(
-			"/dev/cu.usbserial-0239ADD6",
-			57600,
-			1,
+			cfg.Radio.PortName,
+			cfg.Radio.BaudRate,
+			cfg.Radio.MaxRetries,
 		)
 		if err != nil {
 			log.Fatalf("Error while listing saved channels: %s.\n", err)
