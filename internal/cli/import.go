@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"krzywicki.pro/freqr/internal/config"
 	"krzywicki.pro/freqr/internal/csvutil"
 	"krzywicki.pro/freqr/internal/radio"
 )
@@ -16,6 +17,7 @@ var importChannelsCmd = &cobra.Command{
 	Use:   "import-channels",
 	Short: "Import channels from provided CSV file",
 	Run: func(cmd *cobra.Command, args []string) {
+		cfg := config.Get()
 		channels, err := csvutil.ReadChannelsFromCSV(importFilePath)
 		if err != nil {
 			fmt.Printf("Error while reading channels from CSV: %s.\n", err)
@@ -23,8 +25,8 @@ var importChannelsCmd = &cobra.Command{
 		}
 
 		if radio.SaveChannels(
-			"/dev/cu.usbserial-0239ADD6",
-			57600,
+			cfg.Radio.PortName,
+			cfg.Radio.BaudRate,
 			channels,
 		) != nil {
 			fmt.Printf("Error while saving channels in the device: %s.\n", err)
